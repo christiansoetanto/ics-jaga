@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
+	"math/rand/v2"
 	"strings"
+	"time"
 
 	"google.golang.org/api/calendar/v3"
+	"google.golang.org/api/googleapi"
 )
 
 const (
@@ -124,12 +128,54 @@ func insertEvents(srv *calendar.Service, calID string, events []Event) {
 	logger.Infof("inserting %d events...", len(events))
 	for i, ev := range events {
 		gcalEv := toGCalEvent(ev)
-		created, err := srv.Events.Insert(calID, gcalEv).Do()
+		created, err := insertWithRetry(srv, calID, gcalEv)
 		if err != nil {
 			logger.Fatalf("insert event [%s] %s: %v", ev.Date, ev.Summary, err)
 		}
 		logger.Infof("(%d/%d) inserted: %s — event id: %s", i+1, len(events), ev, created.Id)
 	}
+}
+
+// insertWithRetry inserts a single calendar event with exponential backoff.
+// It retries up to maxAttempts times on transient errors (429, 5xx, network).
+// Permanent errors (400, 401, 403, 404) are returned immediately.
+func insertWithRetry(srv *calendar.Service, calID string, ev *calendar.Event) (*calendar.Event, error) {
+	const maxAttempts = 5
+	backoff := time.Second
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		created, err := srv.Events.Insert(calID, ev).Do()
+		if err == nil {
+			return created, nil
+		}
+
+		if !isRetriable(err) || attempt == maxAttempts {
+			return nil, err
+		}
+
+		// Add up to 500ms of random jitter so parallel callers don't all
+		// retry at the exact same moment (thundering herd).
+		jitter := time.Duration(rand.N(500)) * time.Millisecond
+		sleep := backoff + jitter
+		logger.Warnf("attempt %d/%d failed (%v) — retrying in %s...", attempt, maxAttempts, err, sleep.Round(time.Millisecond))
+		time.Sleep(sleep)
+		backoff *= 2 // 1s → 2s → 4s → 8s
+	}
+
+	// unreachable, but satisfies the compiler
+	return nil, errors.New("exceeded max retry attempts")
+}
+
+// isRetriable reports whether err is worth retrying.
+// Google API errors with 429 or 5xx are transient; anything else (400, 401,
+// 403, 404) is a permanent failure that a retry won't fix.
+func isRetriable(err error) bool {
+	var apiErr *googleapi.Error
+	if errors.As(err, &apiErr) {
+		return apiErr.Code == 429 || apiErr.Code >= 500
+	}
+	// Non-API errors (network timeouts, DNS, etc.) are worth retrying.
+	return true
 }
 
 func toGCalEvent(ev Event) *calendar.Event {
