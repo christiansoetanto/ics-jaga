@@ -217,6 +217,40 @@ var shiftColor = map[string]string{
 
 // ── Work hours ────────────────────────────────────────────────────────────────
 
+// workHoursSummary returns a plain-text work hours summary suitable for a
+// calendar description (no ANSI codes).
+func workHoursSummary(events []Event) string {
+	counts := map[string]int{}
+	for _, ev := range events {
+		counts[ev.Summary]++
+	}
+
+	pHours := counts["Pagi"] * 8
+	mHours := counts["Malam"] * 16
+	actualHours := pHours + mHours
+
+	weekdays := countWeekdays(config.Year, config.Month)
+	normalHours := weekdays * 8
+	diff := actualHours - normalHours
+
+	var status string
+	switch {
+	case diff > 8:
+		status = fmt.Sprintf("OVERWORK +%d hrs", diff)
+	case diff < -8:
+		status = fmt.Sprintf("UNDERWORK %d hrs", diff)
+	default:
+		status = fmt.Sprintf("About right (%+d hrs)", diff)
+	}
+
+	return fmt.Sprintf(
+		"Work hours: %d hrs (Pagi %d×8h=%dh, Malam %d×16h=%dh)\nNormal (UU No. 13/2003): %d hrs (%d weekdays × 8h)\nStatus: %s",
+		actualHours, counts["Pagi"], pHours, counts["Malam"], mHours,
+		normalHours, weekdays,
+		status,
+	)
+}
+
 // countWeekdays returns the number of Mon–Fri days in the given month.
 func countWeekdays(year int, month time.Month) int {
 	count := 0

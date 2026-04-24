@@ -25,7 +25,7 @@ func runExecute(ctx context.Context, srv *calendar.Service, calName string, even
 	}
 
 	if calID == "" {
-		calID = createCalendar(srv, calName)
+		calID = createCalendar(srv, calName, workHoursSummary(events))
 		shareCalendar(srv, calID)
 		setCalendarColor(srv, calID)
 	} else {
@@ -68,11 +68,12 @@ func findCalendar(srv *calendar.Service, name string) string {
 	}
 }
 
-func createCalendar(srv *calendar.Service, name string) string {
+func createCalendar(srv *calendar.Service, name, description string) string {
 	logger.Infof("creating calendar %q...", name)
 	cal, err := srv.Calendars.Insert(&calendar.Calendar{
-		Summary:  name,
-		TimeZone: timeZone,
+		Summary:     name,
+		Description: description,
+		TimeZone:    timeZone,
 	}).Do()
 	if err != nil {
 		logger.Fatalf("create calendar: %v", err)
