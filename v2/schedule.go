@@ -215,6 +215,20 @@ var shiftColor = map[string]string{
 	"OFF":         red,
 }
 
+// ── Work hours ────────────────────────────────────────────────────────────────
+
+// countWeekdays returns the number of Mon–Fri days in the given month.
+func countWeekdays(year int, month time.Month) int {
+	count := 0
+	for d := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC); d.Month() == month; d = d.AddDate(0, 0, 1) {
+		w := d.Weekday()
+		if w != time.Saturday && w != time.Sunday {
+			count++
+		}
+	}
+	return count
+}
+
 // ── Dry-run printer ───────────────────────────────────────────────────────────
 
 func printDryRun(calName string, events []Event) {
@@ -274,10 +288,39 @@ func printDryRun(calName string, events []Event) {
 		counts[ev.Summary]++
 	}
 	fmt.Printf("\n  %s\n", border)
-	fmt.Printf("  %sSummary%s\n", bold, reset)
+	fmt.Printf("  %sShift Summary%s\n", bold, reset)
 	for _, code := range []string{"Pagi", "Malam", "Lepas Malam", "OFF"} {
 		color := shiftColor[code]
 		fmt.Printf("  %s%-14s%s  %s%d shifts%s\n", color+bold, code, reset, dim, counts[code], reset)
 	}
-	fmt.Println()
+
+	// Work hours vs Indonesian normal (UU No. 13/2003: 40 hrs/week = weekdays × 8 hrs)
+	pHours := counts["Pagi"] * 8
+	mHours := counts["Malam"] * 16
+	actualHours := pHours + mHours
+
+	weekdays := countWeekdays(config.Year, config.Month)
+	normalHours := weekdays * 8
+	diff := actualHours - normalHours
+
+	var statusStr string
+	switch {
+	case diff > 8:
+		statusStr = fmt.Sprintf("%s▲ OVERWORK  +%d hrs%s", red+bold, diff, reset)
+	case diff < -8:
+		statusStr = fmt.Sprintf("%s▼ UNDERWORK  %d hrs%s", yellow+bold, diff, reset)
+	default:
+		statusStr = fmt.Sprintf("%s✓ ABOUT RIGHT  %+d hrs%s", green+bold, diff, reset)
+	}
+
+	fmt.Printf("\n  %sWork Hours%s\n", bold, reset)
+	fmt.Printf("  %s%-14s%s  %s%d shifts × 8h  = %d hrs%s\n",
+		green+bold, "Pagi", reset, dim, counts["Pagi"], pHours, reset)
+	fmt.Printf("  %s%-14s%s  %s%d shifts × 16h = %d hrs%s\n",
+		blue+bold, "Malam", reset, dim, counts["Malam"], mHours, reset)
+	fmt.Printf("  %s%-14s%s  %s%d hrs%s\n",
+		bold, "Total", reset, bold, actualHours, reset)
+	fmt.Printf("  %s%-14s%s  %s%d weekdays × 8h = %d hrs  (UU No. 13/2003)%s\n",
+		dim, "Normal", reset, dim, weekdays, normalHours, reset)
+	fmt.Printf("\n  %s\n\n", statusStr)
 }
