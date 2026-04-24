@@ -1,0 +1,9 @@
+# OAuth credentials and tokens — never commit these
+v2/credentials.json
+v2/token.json
+
+# Compiled binary
+v2/jaga
+
+# Go build cache
+*.test
