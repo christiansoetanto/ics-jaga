@@ -154,13 +154,32 @@ type LiturgicalColor struct {
 // liturgicalColor returns the dominant liturgical color for the given year/month,
 // based on the Roman Rite calendar. It uses the color of the 1st day of the month.
 //
-// Season → Google Calendar color mapping:
+// Devotional month overrides take priority over the liturgical season:
 //
-//	Christmas / Easter  → Gold   #f6bf26 / #000000
-//	Lent / Advent       → Grape  #7986cb / #ffffff
-//	Ordinary Time       → Sage   #33b679 / #ffffff
-//	Pentecost Sunday    → Tomato #d50000 / #ffffff
+//	May    → Marian blue    #003DA5  (Month of Mary)
+//	June   → Sacred Heart   #8B1A1A  (Sacred Heart of Jesus)
+//	July   → Precious Blood #680000  (Precious Blood of Jesus)
+//	August → Immaculate Hrt #C2185B  (Immaculate Heart of Mary)
+//
+// Season fallback:
+//
+//	Christmas / Easter → Vatican gold      #FFE000
+//	Lent / Advent      → Liturgical violet #5B2C8D
+//	Ordinary Time      → Liturgical green  #2E6B3E
+//	Pentecost Sunday   → Blood red         #d50000
 func liturgicalColor(year int, month time.Month) LiturgicalColor {
+	// Devotional month overrides — highest priority.
+	switch month {
+	case time.May:
+		return LiturgicalColor{"#003DA5", "#ffffff", "Month of Mary"}
+	case time.June:
+		return LiturgicalColor{"#8B1A1A", "#ffffff", "Sacred Heart"}
+	case time.July:
+		return LiturgicalColor{"#680000", "#ffffff", "Precious Blood"}
+	case time.August:
+		return LiturgicalColor{"#C2185B", "#ffffff", "Immaculate Heart"}
+	}
+
 	easter := easterDate(year)
 	ashWed := easter.AddDate(0, 0, -46)
 	pentecost := easter.AddDate(0, 0, 49)
@@ -178,19 +197,19 @@ func liturgicalColor(year int, month time.Month) LiturgicalColor {
 
 	switch {
 	case d.Before(baptismOfLord):
-		return LiturgicalColor{"#f6bf26", "#000000", "Christmas"}
+		return LiturgicalColor{"#FFE000", "#000000", "Christmas"}
 	case d.Before(ashWed):
-		return LiturgicalColor{"#33b679", "#ffffff", "Ordinary Time"}
+		return LiturgicalColor{"#2E6B3E", "#ffffff", "Ordinary Time"}
 	case d.Before(easter):
-		return LiturgicalColor{"#7986cb", "#ffffff", "Lent"}
+		return LiturgicalColor{"#5B2C8D", "#ffffff", "Lent"}
 	case d.Equal(pentecost):
 		return LiturgicalColor{"#d50000", "#ffffff", "Pentecost"}
 	case d.Before(pentecost.AddDate(0, 0, 1)):
-		return LiturgicalColor{"#f6bf26", "#000000", "Easter"}
+		return LiturgicalColor{"#FFE000", "#000000", "Easter"}
 	case d.Before(advent):
-		return LiturgicalColor{"#33b679", "#ffffff", "Ordinary Time"}
+		return LiturgicalColor{"#2E6B3E", "#ffffff", "Ordinary Time"}
 	default:
-		return LiturgicalColor{"#7986cb", "#ffffff", "Advent"}
+		return LiturgicalColor{"#5B2C8D", "#ffffff", "Advent"}
 	}
 }
 
