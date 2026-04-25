@@ -22,11 +22,14 @@ func main() {
 	root := &cobra.Command{
 		Use:   "jaga",
 		Short: "Manage shift schedule on Google Calendar",
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			logger.SetDebug(debug)
-		},
 	}
 	root.PersistentFlags().BoolVar(&debug, "debug", true, "Enable debug logging")
+	root.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		logger.SetDebug(debug)
+		if cmd.Name() != "version" {
+			fmt.Fprintf(os.Stderr, "jaga %s built %s\n", gitCommit, buildTime)
+		}
+	}
 
 	root.AddCommand(cmdDryRun(), cmdExecute(), cmdReset(), cmdVersion())
 
