@@ -100,8 +100,10 @@ func shareCalendar(srv *calendar.Service, calID string) {
 
 func setCalendarColor(srv *calendar.Service, calID string) {
 	lc := liturgicalColor(config.Year, config.Month)
-	logger.Infof("setting calendar color for %s season (%s)...", lc.Season, lc.BG)
+	logger.Infof("setting calendar color for %s (web: %s, mobile colorId: %s)...", lc.Season, lc.BG, lc.ColorID)
+	// Send both: web renders BG hex, mobile renders colorId.
 	_, err := srv.CalendarList.Patch(calID, &calendar.CalendarListEntry{
+		ColorId:         lc.ColorID,
 		BackgroundColor: lc.BG,
 		ForegroundColor: lc.FG,
 	}).ColorRgbFormat(true).Do()

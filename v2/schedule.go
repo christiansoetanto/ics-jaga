@@ -144,10 +144,23 @@ func firstSundayOfAdvent(year int) time.Time {
 	return nearestSunday.AddDate(0, 0, -21) // 3 Sundays back = 4th before Christmas
 }
 
-// LiturgicalColor holds the Google Calendar hex colors for a season.
+// LiturgicalColor holds the Google Calendar color for a season.
+//
+// Both fields are sent to the API simultaneously:
+//   - BG/FG (hex) — used by the web app, which supports custom RGB colors
+//   - ColorID     — used by mobile apps, which snap custom hex to the nearest
+//     preset and render unpredictably; colorId forces the exact preset
+//
+// ID → name → hex reference:
+//
+//	1=Tomato #D50000  2=Flamingo #E67C73  3=Tangerine #F4511E
+//	4=Banana #F6BF26  5=Sage #33B679     6=Basil #0B8043
+//	7=Peacock #039BE5 8=Blueberry #3F51B5 9=Lavender #7986CB
+//	10=Grape #8E24AA  11=Graphite #616161
 type LiturgicalColor struct {
-	BG      string
-	FG      string
+	ColorID string // mobile
+	BG      string // web (hex)
+	FG      string // web (hex)
 	Season  string
 }
 
@@ -171,13 +184,13 @@ func liturgicalColor(year int, month time.Month) LiturgicalColor {
 	// Devotional month overrides — highest priority.
 	switch month {
 	case time.May:
-		return LiturgicalColor{"#003DA5", "#ffffff", "Month of Mary"}
+		return LiturgicalColor{"8", "#003DA5", "#ffffff", "Month of Mary"}    // web: Marian blue    / mobile: Blueberry
 	case time.June:
-		return LiturgicalColor{"#8B1A1A", "#ffffff", "Sacred Heart"}
+		return LiturgicalColor{"1", "#8B1A1A", "#ffffff", "Sacred Heart"}     // web: crimson        / mobile: Tomato
 	case time.July:
-		return LiturgicalColor{"#680000", "#ffffff", "Precious Blood"}
+		return LiturgicalColor{"3", "#680000", "#ffffff", "Precious Blood"}   // web: blood red      / mobile: Tangerine
 	case time.August:
-		return LiturgicalColor{"#C2185B", "#ffffff", "Immaculate Heart"}
+		return LiturgicalColor{"2", "#C2185B", "#ffffff", "Immaculate Heart"} // web: rose           / mobile: Flamingo
 	}
 
 	easter := easterDate(year)
@@ -197,19 +210,19 @@ func liturgicalColor(year int, month time.Month) LiturgicalColor {
 
 	switch {
 	case d.Before(baptismOfLord):
-		return LiturgicalColor{"#FFE000", "#000000", "Christmas"}
+		return LiturgicalColor{"4", "#FFE000", "#000000", "Christmas"}     // web: Vatican gold      / mobile: Banana
 	case d.Before(ashWed):
-		return LiturgicalColor{"#2E6B3E", "#ffffff", "Ordinary Time"}
+		return LiturgicalColor{"6", "#2E6B3E", "#ffffff", "Ordinary Time"} // web: liturgical green  / mobile: Basil
 	case d.Before(easter):
-		return LiturgicalColor{"#5B2C8D", "#ffffff", "Lent"}
+		return LiturgicalColor{"10", "#5B2C8D", "#ffffff", "Lent"}         // web: liturgical violet / mobile: Grape
 	case d.Equal(pentecost):
-		return LiturgicalColor{"#d50000", "#ffffff", "Pentecost"}
+		return LiturgicalColor{"1", "#d50000", "#ffffff", "Pentecost"}     // web: blood red         / mobile: Tomato
 	case d.Before(pentecost.AddDate(0, 0, 1)):
-		return LiturgicalColor{"#FFE000", "#000000", "Easter"}
+		return LiturgicalColor{"4", "#FFE000", "#000000", "Easter"}        // web: Vatican gold      / mobile: Banana
 	case d.Before(advent):
-		return LiturgicalColor{"#2E6B3E", "#ffffff", "Ordinary Time"}
+		return LiturgicalColor{"6", "#2E6B3E", "#ffffff", "Ordinary Time"} // web: liturgical green  / mobile: Basil
 	default:
-		return LiturgicalColor{"#5B2C8D", "#ffffff", "Advent"}
+		return LiturgicalColor{"10", "#5B2C8D", "#ffffff", "Advent"}       // web: liturgical violet / mobile: Grape
 	}
 }
 
