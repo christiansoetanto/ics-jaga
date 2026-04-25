@@ -8,6 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Injected at build time via:
+//
+//	go build -ldflags "-X main.buildTime=<timestamp> -X main.gitCommit=<hash>"
+var (
+	buildTime = "unknown"
+	gitCommit = "dev"
+)
+
 func main() {
 	var debug bool
 
@@ -20,11 +28,22 @@ func main() {
 	}
 	root.PersistentFlags().BoolVar(&debug, "debug", true, "Enable debug logging")
 
-	root.AddCommand(cmdDryRun(), cmdExecute(), cmdReset())
+	root.AddCommand(cmdDryRun(), cmdExecute(), cmdReset(), cmdVersion())
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+}
+
+func cmdVersion() *cobra.Command {
+	return &cobra.Command{
+		Use:     "version",
+		Aliases: []string{"v"},
+		Short:   "Print build version and timestamp",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("jaga %s built %s\n", gitCommit, buildTime)
+		},
 	}
 }
 
